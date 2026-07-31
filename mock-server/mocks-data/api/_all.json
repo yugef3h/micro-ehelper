@@ -1,0 +1,10 @@
+{
+  "code": "0000",
+  "message": "/api 前缀兜底响应",
+  "data": {
+    "message": "This is the /api _all.json fallback",
+    "items|1-3": [
+      { "id": "@id", "label": "@cword(3,8)" }
+    ]
+  }
+}
