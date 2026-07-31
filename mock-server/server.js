@@ -37,5 +37,6 @@ createWatcher();
 // 7. Start
 app.listen(PORT, () => {
   console.log(`\n  Mock Server running at http://localhost:${PORT}`);
-  console.log(`  Admin UI: http://localhost:${PORT}/__admin\n`);
+  console.log(`  Admin UI: http://localhost:${PORT}/__admin`);
+  console.log(`  Vue Demo: http://localhost:8080\n`);
 });

@@ -1,5 +1,5 @@
 {
-  "current": "dev",
+  "current": "prod",
   "envs": [
     "dev",
     "qa",

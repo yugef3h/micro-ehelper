@@ -1,0 +1,8 @@
+{
+  "name": "v2mock",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bash start.sh"
+  }
+}

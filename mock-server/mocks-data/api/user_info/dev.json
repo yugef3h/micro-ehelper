@@ -3,12 +3,19 @@
   "message": "成功",
   "data": {
     "id": "@id",
-    "name": "@cname",
+    "name": "我是dev环境9",
     "email": "@email",
-    "role|1": ["ADMIN", "USER", "GUEST"],
+    "role|1": [
+      "ADMIN",
+      "USER",
+      "GUEST"
+    ],
     "active": "@boolean()",
     "tags|2-3": [
-      { "label": "@cword(2,4)", "value": "@integer(1,100)" }
+      {
+        "label": "@cword(2,4)",
+        "value": "@integer(1,100)"
+      }
     ],
     "profile": {
       "avatar": "@image('200x200')",

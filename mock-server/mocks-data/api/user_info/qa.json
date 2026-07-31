@@ -3,7 +3,7 @@
   "message": "QA环境数据",
   "data": {
     "id": "@id",
-    "name": "QA-@cname",
+    "name": "我是qa环境",
     "env": "qa",
     "role|1": ["TESTER", "DEVELOPER"],
     "active": true
