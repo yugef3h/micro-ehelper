@@ -3,20 +3,17 @@ const fs = require('fs');
 const { MOCKS_DIR, getEnv } = require('./config');
 
 function resolveMockFile(reqPath) {
-  const normalized = reqPath.replace(/^\/+/, '');
-  const parts = normalized.split('/');
-  const endpoint = parts[parts.length - 1];
-  const prefix = parts.slice(0, -1).join('/');
-
-  const env = getEnv().current;
+  var normalized = reqPath.replace(/^\/+/, '');
+  // 去掉 /api 前缀（URL 约定，目录对应不需要）
+  if (normalized.indexOf('api/') === 0) normalized = normalized.substring(4);
+  else if (normalized === 'api') normalized = '';
+  // 斜杠 → 下划线（flat 文件映射）
+  var flatName = normalized.replace(/\//g, '_');
+  var endpoint = flatName;
 
   const candidates = [
-    prefix ? `${prefix}/${endpoint}/${env}.js` : `${endpoint}/${env}.js`,
-    prefix ? `${prefix}/${endpoint}/${env}.json` : `${endpoint}/${env}.json`,
-    prefix ? `${prefix}/${endpoint}.js` : `${endpoint}.js`,
-    prefix ? `${prefix}/${endpoint}.json` : `${endpoint}.json`,
-    prefix ? `${prefix}/_all.js` : null,
-    prefix ? `${prefix}/_all.json` : null,
+    endpoint ? `${endpoint}.js` : null,
+    endpoint ? `${endpoint}.json` : null,
     '_all.js',
     '_all.json',
   ];

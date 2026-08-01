@@ -9,34 +9,29 @@
 <body>
   <header id="topbar">
     <span class="logo">⚡ Mock Server Admin</span>
-    <div class="topbar-right">
-      <label>环境:
-        <select id="env-selector"></select>
-      </label>
-      <span class="port">端口: <strong id="port-display">8888</strong></span>
-      <button id="btn-save" title="保存 (Ctrl+S)">💾 保存</button>
-    </div>
   </header>
 
   <div id="main">
     <aside id="sidebar">
       <div class="sidebar-header">
-        <input type="text" id="search" placeholder="🔍 搜索接口...">
+        <input type="text" id="search" placeholder="搜索接口...">
       </div>
       <nav id="file-tree"></nav>
-      <div class="sidebar-footer">
-        <button id="btn-new-endpoint">+ 新增接口</button>
-      </div>
     </aside>
 
     <section id="editor-panel">
       <div id="editor-toolbar">
         <span id="current-file">← 请从左侧选择接口</span>
+        <span id="error-count" style="color:var(--red);font-size:11px;display:none;margin-left:8px;"></span>
       </div>
       <div id="editor-container" class="editor-split">
         <div id="source-panel">
           <div class="panel-label">源码</div>
-          <textarea id="json-editor" spellcheck="false"></textarea>
+          <div class="editor-wrapper">
+            <div id="line-numbers"></div>
+            <textarea id="json-editor" spellcheck="false"></textarea>
+          </div>
+          <div id="error-panel" style="display:none;max-height:80px;overflow-y:auto;background:#2a1a1a;border-top:1px solid var(--red);padding:4px 8px;font-size:11px;flex-shrink:0;"></div>
         </div>
         <div id="tree-panel">
           <div class="panel-label">树形编辑</div>
@@ -75,19 +70,6 @@
     </div>
   </div>
 
-  <!-- New endpoint modal -->
-  <div id="endpoint-modal" class="modal" style="display:none">
-    <div class="modal-content">
-      <h2>新增 Mock 接口</h2>
-      <label>路径前缀: <select id="new-prefix"></select></label>
-      <label>接口名: <input type="text" id="new-endpoint-name" placeholder="例: user_info"></label>
-      <label>环境: <select id="new-env"></select></label>
-      <div class="modal-actions">
-        <button id="btn-endpoint-create">创建</button>
-        <button id="btn-endpoint-cancel">取消</button>
-      </div>
-    </div>
-  </div>
 
   <script src="/__admin/tree-editor.js"></script>
   <script src="/__admin/app.js"></script>

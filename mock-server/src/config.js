@@ -2,8 +2,9 @@ const path = require('path');
 const fs = require('fs');
 
 const MOCKS_DIR = path.join(__dirname, '..', 'mocks-data');
-const ENV_FILE = path.join(MOCKS_DIR, '_env.json');
-const STATE_FILE = path.join(MOCKS_DIR, '_state.json');
+const META_DIR = path.join(__dirname, '..', 'mock-meta');
+const ENV_FILE = path.join(META_DIR, '_env.json');
+const STATE_FILE = path.join(META_DIR, '_state.json');
 
 const DEFAULT_ENV = { current: 'dev', envs: ['dev', 'qa', 'prod'] };
 const DEFAULT_STATE = {};
@@ -63,4 +64,4 @@ function initConfig() {
   }
 }
 
-module.exports = { MOCKS_DIR, ENV_FILE, STATE_FILE, getEnv, setEnv, getState, setState, readJSON, writeJSON, initConfig };
+module.exports = { MOCKS_DIR, META_DIR, ENV_FILE, STATE_FILE, getEnv, setEnv, getState, setState, readJSON, writeJSON, initConfig };

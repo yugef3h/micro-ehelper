@@ -129,3 +129,16 @@ DOM 相关的只能在浏览器里测，但数据变换逻辑（pipe 展开/折�
 - pipe 语法（`items|5`）在树编辑器中展开到最小值，改动后自动转显式数组
 - mockjs `@函数` 参数中**不能有空格**：`@float(10,5000,2,2)` ✅，`@float(10, 5000, 2, 2)` ❌（会无限递归）
 - `npm run dev` 启动新项目直连模式，`npm run dev:whistle` 启动旧项目 Whistle 代理模式
+
+## Import 管道
+
+Chrome 插件"📥 导入到 Mock Server"按钮 → `POST /__admin/api/import`:
+
+```
+YApi 接口页 → fetchYapiData() → { path, method, title, res_body }
+  → POST localhost:8888/__admin/api/import
+  → src/import.js: schemaToBody(JSON Schema) → mockjs 模板
+  → 保存 mocks-data/{path}/dev.js + _schema.json
+```
+
+`_schema.json` 保存原始 JSON Schema，供后续数组 resize 从 0 恢复时读取类型信息。

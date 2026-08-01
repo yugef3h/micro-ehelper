@@ -13,25 +13,17 @@ function createWatcher() {
   watcher.on('add', (filePath) => {
     const relPath = path.relative(MOCKS_DIR, filePath);
     console.log(`  [watch] + ${relPath}`);
-    if (filePath.endsWith('.js')) {
-      delete require.cache[require.resolve(filePath)];
-    }
+    if (filePath.endsWith('.js')) delete require.cache[require.resolve(filePath)];
   });
-
   watcher.on('change', (filePath) => {
     const relPath = path.relative(MOCKS_DIR, filePath);
     console.log(`  [watch] ~ ${relPath}`);
-    if (filePath.endsWith('.js')) {
-      delete require.cache[require.resolve(filePath)];
-    }
+    if (filePath.endsWith('.js')) delete require.cache[require.resolve(filePath)];
   });
-
   watcher.on('unlink', (filePath) => {
     const relPath = path.relative(MOCKS_DIR, filePath);
     console.log(`  [watch] - ${relPath}`);
-    if (filePath.endsWith('.js')) {
-      delete require.cache[require.resolve(filePath)];
-    }
+    if (filePath.endsWith('.js')) delete require.cache[require.resolve(filePath)];
   });
 
   console.log('[watch] Listening for changes in mocks-data/');

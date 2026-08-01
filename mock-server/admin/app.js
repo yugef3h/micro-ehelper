@@ -4,7 +4,6 @@
 
 const API = '/__admin/api';
 let currentFile = null;
-let currentEnv = 'dev';
 let fileTreeData = [];
 
 // ========== API helpers ==========
@@ -38,11 +37,7 @@ async function init() {
   window._onTreeChange = function () { syncTreeToSource(); };
 
   // 事件绑定——放 await 前面，API 失败不影响
-  document.getElementById('btn-save').addEventListener('click', saveCurrentFile);
   document.getElementById('btn-send').addEventListener('click', sendPreview);
-  document.getElementById('btn-new-endpoint').addEventListener('click', showNewEndpointModal);
-  document.getElementById('btn-endpoint-create').addEventListener('click', createEndpoint);
-  document.getElementById('btn-endpoint-cancel').addEventListener('click', hideNewEndpointModal);
   document.getElementById('btn-state-save').addEventListener('click', saveState);
   document.getElementById('btn-state-close').addEventListener('click', function () {
     document.getElementById('state-modal').style.display = 'none';
@@ -52,30 +47,52 @@ async function init() {
 
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveCurrentFile(); }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      var ed = document.getElementById('json-editor');
+      ed.value = _formatSource(ed.value);
+      _updateLineNumbers();
+      _showErrors(_validateBody(ed.value));
+    }
   });
 
-  // source → tree：debounce 1 秒，停止输入后才同步
+  // source → validate + format + tree sync：停止输入 2 秒后执行
   var _sttTimer = null;
   document.getElementById('json-editor').addEventListener('input', function () {
+    _updateLineNumbers();
     clearTimeout(_sttTimer);
-    _sttTimer = setTimeout(syncSourceToTree, 1000);
+    _sttTimer = setTimeout(function () {
+      var ed = document.getElementById('json-editor');
+      // 先格式化（自动修复尾逗号等），再校验格式化结果
+      ed.value = _formatSource(ed.value);
+      _updateLineNumbers();
+      var errors = _validateBody(ed.value);
+      _showErrors(errors);
+      if (errors.length === 0) syncSourceToTree();
+    }, 2000);
+  });
+
+  // 行号滚动同步
+  document.getElementById('json-editor').addEventListener('scroll', function () {
+    document.getElementById('line-numbers').scrollTop = this.scrollTop;
   });
 
   // ============================================================
   // 异步初始化：依赖 API
   // ============================================================
 
-  try {
-    var envData = await apiGet('/env');
-    currentEnv = envData.current;
-    var sel = document.getElementById('env-selector');
-    sel.innerHTML = envData.envs.map(function (e) {
-      return '<option value="' + e + '"' + (e === currentEnv ? ' selected' : '') + '>' + e.toUpperCase() + '</option>';
-    }).join('');
-    sel.addEventListener('change', onEnvChange);
-  } catch (e) { console.warn('[init] env API 不可用'); }
-
   try { await loadFileTree(); } catch (e) { console.warn('[init] file tree 加载失败'); }
+
+  // 每 3 秒自动刷新文件树
+  setInterval(async function () {
+    try {
+      var newTree = await apiGet('/tree');
+      if (JSON.stringify(newTree) !== JSON.stringify(fileTreeData)) {
+        fileTreeData = newTree;
+        renderFileTree(fileTreeData);
+      }
+    } catch (e) { /* ignore */ }
+  }, 3000);
 
   console.log('Mock Server Admin ready');
 }
@@ -149,7 +166,8 @@ async function loadFile(node) {
       if (sel) sel.classList.add('active');
     } catch(e) { /* ignore querySelector errors */ }
 
-    document.getElementById('json-editor').value = data.content;
+    document.getElementById('json-editor').value = _formatSource(data.content);
+    _updateLineNumbers();
     document.getElementById('current-file').textContent = node.path;
 
     // Derive preview path from file path
@@ -166,68 +184,19 @@ async function loadFile(node) {
 
 async function saveCurrentFile() {
   if (!currentFile) return;
-  const content = document.getElementById('json-editor').value;
+  var editor = document.getElementById('json-editor');
+  // 格式化
+  editor.value = _formatSource(editor.value);
+  _updateLineNumbers();
+  // 有错误不保存
+  var errors = _validateBody(editor.value);
+  _showErrors(errors);
+  if (errors.length > 0) return;
+  // 保存
   try {
-    if (currentFile.type === 'json') JSON.parse(content);
-    await apiPost('/file', { filePath: currentFile.path, content });
-    setTimeout(syncSourceToTree, 200); // 等服务器更新后刷新树
-    const btn = document.getElementById('btn-save');
-    btn.textContent = '💾 已保存';
-    setTimeout(() => { btn.textContent = '💾 保存'; }, 1500);
-  } catch (err) {
-    alert('保存失败: ' + err.message);
-  }
-}
-
-function addField() {
-  const editor = document.getElementById('json-editor');
-  try {
-    const obj = JSON.parse(editor.value);
-    const key = prompt('字段名:');
-    if (!key) return;
-    const type = prompt('类型: 1=字符串 2=数字 3=布尔 4=对象 5=数组 (默认1):', '1');
-    const map = { '1': '', '2': 0, '3': false, '4': {}, '5': [] };
-    obj[key] = map[type] || '';
-    editor.value = JSON.stringify(obj, null, 2);
-  } catch (e) {
-    alert('JSON 格式错误');
-  }
-}
-
-// ========== Environment ==========
-
-async function onEnvChange(e) {
-  currentEnv = e.target.value;
-  await apiPost('/env', { current: currentEnv });
-  await loadFileTree();
-  if (currentFile) {
-    // Reload file for new env: try same sub-path with new env dir
-    const parts = currentFile.path.split('/');
-    // Heuristic: replace env segment if the parent dir matches endpoint name
-    reloadCurrentFile();
-  }
-}
-
-async function reloadCurrentFile() {
-  if (!currentFile) return;
-  // Refresh tree data and re-render
-  fileTreeData = await apiGet('/tree');
-  renderFileTree(fileTreeData);
-  // Try to find and load a matching file
-  const baseName = currentFile.path.split('/').pop();
-  const found = findFileByName(fileTreeData, baseName);
-  if (found) await loadFile(found);
-}
-
-function findFileByName(nodes, name) {
-  for (const n of nodes) {
-    if (n.type === 'directory' && n.children) {
-      const r = findFileByName(n.children, name);
-      if (r) return r;
-    }
-    if (n.name === name) return n;
-  }
-  return null;
+    await apiPost('/file', { filePath: currentFile.path, content: editor.value });
+    setTimeout(syncSourceToTree, 200);
+  } catch (err) { alert('保存失败: ' + err.message); }
 }
 
 // ========== Tree ↔ Source sync ==========
@@ -319,13 +288,135 @@ function _collapsePipes(body) {
   return out;
 }
 
+// 校验 body 块：返回问题列表 [{ line, col, msg }]
+function _validateBody(src) {
+  var errors = [];
+  var bodyStart = 0;
+  var idx = src.indexOf('body:');
+  if (idx === -1) return errors;
+  var start = src.indexOf('{', idx);
+  if (start === -1) return errors;
+  var depth = 1, end = start + 1;
+  while (depth > 0 && end < src.length) { if (src[end] === '{') depth++; else if (src[end] === '}') depth--; end++; }
+  if (depth !== 0) { errors.push({ line: lineOf(src, idx), msg: '大括号不匹配' }); return errors; }
+
+  var bodySrc = src.substring(start, end);
+  var bodyLine = lineOf(src, start);
+
+  // 全角标点
+  var fw = [
+    [/[“”]/g, '全角引号“”应为半角"'],
+    [/[‘’]/g, "全角引号''应为半角'"],
+    [/[：]/g, '全角冒号：应为半角:'],
+    [/[，]/g, '全角逗号，应为半角,'],
+    [/[（]/g, '全角括号（应为半角('],
+    [/[）]/g, '全角括号）应为半角)'],
+    [/[　]/g, '全角空格应为半角空格'],
+  ];
+  for (var i = 0; i < fw.length; i++) {
+    var re = fw[i][0], msg = fw[i][1];
+    var m;
+    re.lastIndex = 0;
+    while ((m = re.exec(bodySrc)) !== null) {
+      errors.push({ line: bodyLine + linesBefore(bodySrc, m.index), msg: msg });
+    }
+  }
+
+  // 尾逗号
+  var tcRe = /,(\s*[\}\]])/g, tcM;
+  while ((tcM = tcRe.exec(bodySrc)) !== null) {
+    errors.push({ line: bodyLine + linesBefore(bodySrc, tcM.index), msg: '多余尾逗号' });
+  }
+
+  // 无引号 key（排除已引号的和合法标识符）
+  var uqRe = /([\{,]\s*)([a-zA-Z_$][\w$]*)\s*:/g, uqM;
+  // 更广泛的：中文等非 ASCII key 无引号
+  var cnRe = /[一-鿿　-〿＀-￯]/;
+  var lines = bodySrc.split('\n');
+  for (var l = 0; l < lines.length; l++) {
+    // 检查行内是否有未引号 key
+    var keyM = lines[l].match(/(?:^|[,{]\s*)([a-zA-Z_一-鿿][^"'\s:,{}[\]]*?)\s*:/);
+    if (keyM && !lines[l].match(/["']\s*:/)) {
+      errors.push({ line: bodyLine + l, msg: 'key 缺少引号: ' + keyM[1] });
+    }
+  }
+
+  // JSON 解析校验
+  try { JSON.parse(bodySrc); }
+  catch (e) {
+    var col = 1;
+    var posM = e.message.match(/position (\d+)/);
+    if (posM) col = parseInt(posM[1]);
+    errors.push({ line: bodyLine + linesBefore(bodySrc, col), msg: 'JSON 语法错误: ' + e.message });
+  }
+
+  return errors;
+}
+
+function lineOf(src, pos) { return (src.substring(0, pos).match(/\n/g) || []).length + 1; }
+function linesBefore(src, pos) { return (src.substring(0, pos).match(/\n/g) || []).length; }
+
+function _formatSource(src) {
+  var idx = src.indexOf('body:');
+  if (idx === -1) return src;
+  var start = src.indexOf('{', idx);
+  if (start === -1) return src;
+  var depth = 1, end = start + 1;
+  while (depth > 0 && end < src.length) { if (src[end] === '{') depth++; else if (src[end] === '}') depth--; end++; }
+  if (depth !== 0) return src;
+
+  // 提取 body 并清理尾逗号
+  var bodySrc = src.substring(start, end).replace(/,(\s*[\}\]])/g, '$1');
+  var body;
+  try { body = JSON.parse(bodySrc); }
+  catch (e) { try { body = (new Function('return ' + bodySrc))(); } catch (e2) { return src; } }
+  if (!body || typeof body !== 'object') return src;
+  return _replaceBodyInSrc(src, JSON.stringify(body, null, 2));
+}
+
+function _updateLineNumbers() {
+  var ed = document.getElementById('json-editor');
+  var lines = ed.value.split('\n');
+  var ln = document.getElementById('line-numbers');
+  var html = '';
+  for (var i = 0; i < lines.length; i++) html += '<div>' + (i + 1) + '</div>';
+  ln.innerHTML = html;
+}
+
+function _showErrors(errors) {
+  var cnt = document.getElementById('error-count');
+  var panel = document.getElementById('error-panel');
+  var ln = document.getElementById('line-numbers');
+  // 清除旧状态
+  ln.querySelectorAll('div').forEach(function (d) { d.style.background = ''; });
+  if (!errors.length) { cnt.style.display = 'none'; panel.style.display = 'none'; return; }
+  cnt.style.display = ''; cnt.textContent = `⚠️ ` + errors.length + ' 个问题';
+  panel.style.display = '';
+  panel.innerHTML = errors.map(function (e) {
+    return '<div style="color:var(--red);cursor:pointer;padding:1px 0;" data-line="' + e.line + '">L' + e.line + ': ' + e.msg + '</div>';
+  }).join('');
+  panel.querySelectorAll('div[data-line]').forEach(function (d) {
+    d.addEventListener('click', function () {
+      var el = document.getElementById('json-editor');
+      var line = parseInt(this.dataset.line);
+      var lines = el.value.split('\n');
+      var pos = 0;
+      for (var i = 0; i < Math.min(line - 1, lines.length); i++) pos += lines[i].length + 1;
+      el.focus(); el.setSelectionRange(pos, pos);
+    });
+  });
+  // 错误行号红色背景
+  var errLines = errors.map(function (e) { return e.line; });
+  ln.querySelectorAll('div').forEach(function (d, i) {
+    if (errLines.indexOf(i + 1) !== -1) d.style.background = 'rgba(243,139,168,0.2)';
+  });
+}
+
 // 在源码中替换 body: { ... } 块
 function _replaceBodyInSrc(src, bodyStr) {
   var idx = src.indexOf('body:');
-  console.log('[sync] _replaceBodyInSrc: body: at index', idx);
   if (idx === -1) return src;
   var start = src.indexOf('{', idx);
-  console.log('[sync] _replaceBodyInSrc: { at index', start);
   if (start === -1) return src;
   var depth = 1, end = start + 1;
   while (depth > 0 && end < src.length) {
@@ -333,33 +424,26 @@ function _replaceBodyInSrc(src, bodyStr) {
     else if (src[end] === '}') depth--;
     end++;
   }
-  console.log('[sync] _replaceBodyInSrc: depth', depth, 'end at', end);
   if (depth !== 0) return src;
-  var indent = '';
-  var li = idx;
-  while (li > 0 && src[li - 1] !== '\n') li--;
-  for (var c = li; c < idx && (src[c] === ' ' || src[c] === '\t'); c++) indent += src[c];
-  var lines = bodyStr.split('\n');
-  var indented = lines[0];
-  for (var l = 1; l < lines.length; l++) indented += '\n' + indent + lines[l];
-  var result = src.substring(0, start) + indented + src.substring(end);
-  console.log('[sync] _replaceBodyInSrc: replaced. src changed:', result !== src, 'length:', result.length);
-  return result;
+  // body 内容缩进 4 空格（在 declare 内）
+  var bodyLines = bodyStr.split('\n');
+  var indented = bodyLines[0];
+  for (var l = 1; l < bodyLines.length; l++) indented += '\n    ' + bodyLines[l];
+  return src.substring(0, start) + indented + src.substring(end);
 }
 
 function syncTreeToSource() {
-  console.log('[sync] syncTreeToSource called, currentFile:', currentFile);
-  if (!currentFile) { console.log('[sync] no currentFile, skip'); return; }
+  if (!currentFile) return;
   var body = _collapsePipes(TreeEditor.getData());
-  if (!body) { console.log('[sync] no body data, skip'); return; }
-  console.log('[sync] collapsed body keys:', Object.keys(body));
+  if (!body) return;
   var editor = document.getElementById('json-editor');
   var src = editor.value;
   var bodyStr = JSON.stringify(body, null, 2);
-  var newSrc = _replaceBodyInSrc(src, bodyStr);
-  console.log('[sync] source changed:', src !== newSrc);
-  editor.value = newSrc;
-  saveCurrentFile();
+  editor.value = _replaceBodyInSrc(src, bodyStr);
+  _updateLineNumbers();
+  var errors = _validateBody(editor.value);
+  _showErrors(errors);
+  if (errors.length === 0) saveCurrentFile();
 }
 
 // 源 → 树：重新解析 declare + 展开 pipe
@@ -410,47 +494,6 @@ async function sendPreview() {
   } catch (err) {
     el.textContent = `// Error: ${err.message}`;
     el.style.color = 'var(--red)';
-  }
-}
-
-// ========== New endpoint ==========
-
-async function showNewEndpointModal() {
-  const tree = await apiGet('/tree');
-  const prefixes = tree.filter(n => n.type === 'directory').map(n => n.name);
-  if (!prefixes.length) prefixes.push('api');
-
-  document.getElementById('new-prefix').innerHTML = prefixes.map(p => `<option>${p}</option>`).join('');
-
-  const envData = await apiGet('/env');
-  document.getElementById('new-env').innerHTML = envData.envs.map(e =>
-    `<option value="${e}" ${e === currentEnv ? 'selected' : ''}>${e.toUpperCase()}</option>`
-  ).join('');
-
-  document.getElementById('endpoint-modal').style.display = 'flex';
-}
-
-function hideNewEndpointModal() {
-  document.getElementById('endpoint-modal').style.display = 'none';
-}
-
-async function createEndpoint() {
-  const prefix = document.getElementById('new-prefix').value;
-  const name = document.getElementById('new-endpoint-name').value.trim();
-  const env = document.getElementById('new-env').value;
-
-  if (!name) return alert('请输入接口名');
-
-  const filePath = `${prefix}/${name}/${env}.json`;
-  const template = { code: '0000', message: '成功', data: {} };
-
-  try {
-    await apiPost('/file', { filePath, content: JSON.stringify(template, null, 2) });
-    hideNewEndpointModal();
-    document.getElementById('new-endpoint-name').value = '';
-    await loadFileTree();
-  } catch (err) {
-    alert('创建失败: ' + err.message);
   }
 }
 

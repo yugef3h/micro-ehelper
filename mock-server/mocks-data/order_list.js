@@ -12,8 +12,9 @@ module.exports = {
         "total": "@integer(10,200)",
         "items": [
           {
-name: "111"
-}
+            "name": "111",
+            "test": "222"
+          }
         ]
       }
     }

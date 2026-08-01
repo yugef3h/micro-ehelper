@@ -284,4 +284,71 @@ router.get('/declare', (req, res) => {
   }
 });
 
+// ---- import: YApi interface → mock JS file ----
+
+const { schemaToBody, schemaToTS } = require('./import');
+
+// POST /import  { path, method, title, res_body }
+router.post('/import', (req, res) => {
+  try {
+    var apiPath = req.body.path || '/';
+    var method = req.body.method || 'GET';
+    var title = req.body.title || 'Untitled';
+    var resBody = req.body.res_body || '{}';
+
+    // 解析 res_body JSON Schema
+    var schema;
+    try { schema = JSON.parse(resBody); } catch (e) {
+      return res.status(400).json({ code: 'ERROR', message: 'res_body 不是合法的 JSON: ' + e.message });
+    }
+
+    // 路径 → flat 文件名：/interview/open/v2/home/ai → interview_open_v2_home_ai
+    var flatName = apiPath.replace(/^\/+|\/+$/g, '').replace(/\//g, '_') || 'index';
+
+    // 生成 mock body
+    var body = schemaToBody(schema);
+
+    // 生成 JS 文件内容（统一 2 空格缩进）
+    var bodyStr = JSON.stringify(body, null, 2);
+    var bodyLines = bodyStr.split('\n');
+    var jsContent = [
+      'module.exports = {',
+      '  declare: {',
+      '    delay: 300,',
+      '    status: 200,',
+      '    body: ' + bodyLines[0]
+    ];
+    for (var i = 1; i < bodyLines.length; i++) {
+      jsContent.push('    ' + bodyLines[i]);
+    }
+    jsContent.push('  }');
+    jsContent.push('};');
+    jsContent = jsContent.join('\n') + '\n';
+
+    // 直接写 mocks-data/{flatName}.js
+    var jsPath = path.join(MOCKS_DIR, flatName + '.js');
+    fs.writeFileSync(jsPath, jsContent, 'utf-8');
+
+    // 写入 schema 和 TS 类型到 mock-meta/{flatName}/
+    var metaDir = path.join(__dirname, '..', 'mock-meta', flatName);
+    if (!fs.existsSync(metaDir)) fs.mkdirSync(metaDir, { recursive: true });
+    var schemaPath = path.join(metaDir, 'schema.json');
+    var tsPath = path.join(metaDir, 'types.d.ts');
+    writeJSON(schemaPath, schema);
+    fs.writeFileSync(tsPath, schemaToTS(schema, flatName), 'utf-8');
+
+    res.json({
+      code: '0000',
+      data: {
+        file: flatName + '.js',
+        endpoint: flatName,
+        title: title,
+        bodyKeys: Object.keys(body)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ code: 'ERROR', message: err.message });
+  }
+});
+
 module.exports = router;
