@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bash start.sh"
+    "dev": "bash start.sh direct",
+    "dev:whistle": "bash start.sh whistle"
   }
 }

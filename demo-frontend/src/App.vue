@@ -4,7 +4,7 @@
       <h1>⚡ v2mock Demo — 实时数据面板</h1>
       <div class="meta">
         <span>Mock: <strong :class="serverOk ? 'ok' : 'err'">{{ serverOk ? '已连接' : '未连接' }}</strong></span>
-        <span>环境: <strong>{{ envName }}</strong></span>
+        <span>模式: <strong>{{ proxyMode === 'whistle' ? 'Whistle 代理链' : '直连' }}</strong></span>
         <span>{{ clock }}</span>
       </div>
     </header>
@@ -65,6 +65,7 @@ export default {
   name: 'App',
   data() {
     return {
+      proxyMode: process.env.VUE_APP_PROXY_MODE || 'direct',
       envName: '-',
       serverOk: false,
       clock: '',

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve --mode development --open"
+    "serve": "vue-cli-service serve --mode direct --open",
+    "serve:whistle": "vue-cli-service serve --mode whistle --open"
   },
   "dependencies": {
     "axios": "0.24.0",

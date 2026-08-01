@@ -1,8 +1,1 @@
-{
-  "current": "prod",
-  "envs": [
-    "dev",
-    "qa",
-    "prod"
-  ]
-}
+{"current":"dev","envs":["dev","qa","prod"]}
