@@ -130,10 +130,30 @@ body {
   margin-left: 6px;
 }
 #editor-toolbar button:hover { background: var(--border); }
-#editor-container { flex: 1; overflow: hidden; }
+#editor-container { flex: 1; overflow: hidden; display: flex; }
+#editor-container.editor-split { flex-direction: row; }
+#source-panel, #tree-panel {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+#source-panel { border-right: 1px solid var(--border); }
+.panel-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#tree-editor { flex: 1 1 0; overflow: auto; padding: 4px 6px; }
 #json-editor {
+  flex: 1 1 0;
   width: 100%;
-  height: 100%;
   background: var(--bg);
   color: var(--text);
   border: none;
@@ -248,3 +268,20 @@ body {
   background: var(--surface2);
   color: var(--text);
 }
+
+/* ---- Tree editor ---- */
+.jt-row { display: flex; align-items: baseline; padding: 1px 8px; font-size: 12px; line-height: 1.7; white-space: nowrap; min-height: 20px; }
+.jt-row:hover { background: rgba(137,180,250,0.06); }
+.jt-row:hover .jt-edit { opacity: 1; }
+.jt-tog { width: 14px; flex-shrink: 0; color: var(--text-dim); font-size: 10px; user-select: none; }
+.jt-key { color: var(--accent); margin-right: 3px; flex-shrink: 0; }
+.jt-val { margin-right: 3px; flex-shrink: 0; }
+.jt-str { color: var(--green); }
+.jt-num { color: var(--yellow); }
+.jt-bool { color: #cba6f7; }
+.jt-null { color: var(--text-dim); font-style: italic; }
+.jt-brace { color: var(--text-dim); margin-left: 2px; }
+.jt-cnt { width: 50px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; padding: 0 3px; font-family: var(--font); font-size: 10px; text-align: center; margin-left: 4px; }
+.jt-edit { opacity: 0; background: var(--surface2); color: var(--text-dim); border: none; cursor: pointer; font-size: 10px; padding: 0 4px; border-radius: 2px; flex-shrink: 0; margin-left: 2px; }
+.jt-inp { background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 3px; padding: 1px 4px; font-family: var(--font); font-size: 12px; outline: none; margin-right: 3px; }
+.jt-inp-ta { background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 3px; padding: 2px 4px; font-family: var(--font); font-size: 12px; outline: none; width: 260px; resize: vertical; line-height: 1.4; }

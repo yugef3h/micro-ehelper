@@ -1,25 +1,26 @@
 const Mock = require('mockjs');
 
-module.exports = async function (req, res, state) {
-  await new Promise(resolve => setTimeout(resolve, 200));
+module.exports = {
+  declare: {
+    delay: 300,
+    status: 200,
+    body: {
+      "result": "1",
+      "code": "0",
+      "msg": "",
+      "data": {
+        "total": "@integer(10,200)",
+        "items": [
+          {
+name: "111"
+}
+        ]
+      }
+    }
+  },
 
-  const data = Mock.mock({
-    code: '0000',
-    message: 'success',
-    data: {
-      total: '@integer(10, 200)',
-      'items|5': [
-        {
-          id: '@id',
-          title: '@cword(4, 12)',
-          price: '@float(10, 5000, 2, 2)',
-          'status|1': ['PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED'],
-          createTime: '@datetime',
-        },
-      ],
-      featureEnabled: state.featureEnabled || false,
-    },
-  });
-
-  res.json(data);
+  handler(req, res, state, data) {
+    if (state.featureEnabled) data.data.vip = true;
+    if (req.body && req.body.userId === 'admin') data.code = "9999";
+  }
 };

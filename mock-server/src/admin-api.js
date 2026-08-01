@@ -192,16 +192,17 @@ router.post('/preview', (req, res) => {
     if (result.type === 'js') {
       const state = getState();
       delete require.cache[require.resolve(result.filePath)];
-      const handler = require(result.filePath);
-      if (typeof handler === 'function') {
-        handler(mockReq, mockRes, state).then(() => {
-          res.json({ code: '0000', data: { status: 'ok', file: result.filePath, response: captured } });
-        }).catch(err => {
-          res.json({ code: '0000', data: { status: 'error', message: err.message } });
-        });
-        return;
+      const mod = require(result.filePath);
+
+      // 新格式: { declare: { body }, handler }
+      if (mod && mod.declare) {
+        captured = Mock.mock(JSON.parse(JSON.stringify(mod.declare.body)));
+      } else if (typeof mod === 'function') {
+        // 旧格式: function(req, res, state)
+        mod(mockReq, mockRes, state);
+      } else {
+        captured = Mock.mock(mod);
       }
-      captured = Mock.mock(handler);
     } else {
       const raw = fs.readFileSync(result.filePath, 'utf-8');
       captured = Mock.mock(JSON.parse(raw));
@@ -258,6 +259,28 @@ router.post('/endpoint-config', (req, res) => {
     res.json({ code: '0000', message: 'Saved' });
   } catch (err) {
     res.status(500).json({ code: 'ERROR', message: err.message });
+  }
+});
+
+// GET /declare?path=xxx  — 读取 JS 文件的 declare 块
+router.get('/declare', (req, res) => {
+  try {
+    const filePath = path.join(MOCKS_DIR, req.query.path);
+    if (!filePath.startsWith(MOCKS_DIR)) {
+      return res.status(403).json({ code: 'ERROR', message: 'Path traversal denied' });
+    }
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ code: 'ERROR', message: 'File not found' });
+    }
+    delete require.cache[require.resolve(filePath)];
+    const mod = require(filePath);
+    if (mod && mod.declare) {
+      res.json({ code: '0000', data: mod.declare });
+    } else {
+      res.json({ code: '0000', data: null, message: 'No declare block' });
+    }
+  } catch (err) {
+    res.json({ code: 'ERROR', message: err.message });
   }
 });
 

@@ -32,13 +32,16 @@
     <section id="editor-panel">
       <div id="editor-toolbar">
         <span id="current-file">← 请从左侧选择接口</span>
-        <div>
-          <button id="btn-add-field">新增字段</button>
-          <button id="btn-format">格式化</button>
-        </div>
       </div>
-      <div id="editor-container">
-        <textarea id="json-editor" spellcheck="false"></textarea>
+      <div id="editor-container" class="editor-split">
+        <div id="source-panel">
+          <div class="panel-label">源码</div>
+          <textarea id="json-editor" spellcheck="false"></textarea>
+        </div>
+        <div id="tree-panel">
+          <div class="panel-label">树形编辑</div>
+          <div id="tree-editor"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -86,6 +89,8 @@
     </div>
   </div>
 
+  <script src="/__admin/tree-editor.js"></script>
   <script src="/__admin/app.js"></script>
+  <script src="/__admin/health-check.js"></script>
 </body>
 </html>

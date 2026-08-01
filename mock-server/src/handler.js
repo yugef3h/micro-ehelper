@@ -3,33 +3,105 @@ const path = require('path');
 const Mock = require('mockjs');
 const { getState } = require('./config');
 
-// 从 JSON 文件内容中提取 _mock 配置（存在则返回，不存在返回 null）
-function extractMockMeta(content) {
+// ---- JSON handler ----
+
+function handleJson(filePath, req, res) {
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  // 提取 _mock 元数据（如果存在）
+  let delay = 0, error = false, errorCode = 500, errorMsg = 'Internal Server Error';
   try {
-    const obj = JSON.parse(content);
-    if (obj._mock && typeof obj._mock === 'object') {
-      return {
-        delay: Number(obj._mock.delay) || 0,
-        error: Boolean(obj._mock.error),
-        errorCode: Number(obj._mock.errorCode) || 500,
-        errorMessage: obj._mock.errorMessage || 'Internal Server Error'
-      };
+    const obj = JSON.parse(raw);
+    if (obj._mock) {
+      delay = Number(obj._mock.delay) || 0;
+      error = Boolean(obj._mock.error);
+      errorCode = Number(obj._mock.errorCode) || 500;
+      errorMsg = obj._mock.errorMessage || errorMsg;
     }
   } catch (e) { /* ignore */ }
-  return null;
+
+  applyThen(raw, res, delay, error, errorCode, errorMsg, () => {
+    const raw2 = fs.readFileSync(filePath, 'utf-8');
+    const template = JSON.parse(raw2);
+    delete template._mock;
+    res.json(Mock.mock(template));
+  });
 }
 
-// 从 JSON 内容中删除 _mock 字段
-function stripMockMeta(content) {
-  try {
-    const obj = JSON.parse(content);
-    delete obj._mock;
-    return JSON.stringify(obj);
-  } catch (e) { return content; }
+// ---- JS handler ----
+
+function handleJs(filePath, req, res, next) {
+  delete require.cache[require.resolve(filePath)];
+  const mod = require(filePath);
+
+  // 新格式: module.exports = { declare: {...}, handler(req,res,state,data) {} }
+  if (mod && typeof mod === 'object' && mod.declare) {
+    const dec = mod.declare;
+    const delay = Number(dec.delay) || 0;
+    const status = Number(dec.status) || 200;
+    const body = dec.body || {};
+    const handler = (typeof mod.handler === 'function') ? mod.handler : null;
+
+    applyThen(filePath, res, delay, false, 500, '', () => {
+      // deep clone + Mock.mock 展开
+      const data = Mock.mock(JSON.parse(JSON.stringify(body)));
+
+      if (handler) {
+        // handler 可以修改 data，也可以直接 res.json()
+        let sent = false;
+        const wrappedRes = {
+          ...res,
+          json(obj) { sent = true; res.status(status).json(obj); },
+          send(obj) { sent = true; res.status(status).send(obj); }
+        };
+        const state = getState();
+        const result = handler(req, wrappedRes, state, data);
+        // handler 没调用 res.json → 发送 data
+        if (!sent) {
+          if (result && typeof result.then === 'function') {
+            result.then(() => {
+              if (!sent) res.status(status).json(data);
+            }).catch(err => {
+              if (!sent) res.status(500).json({ code: 'ERROR', message: err.message });
+            });
+          } else {
+            res.status(status).json(data);
+          }
+        }
+      } else {
+        res.status(status).json(data);
+      }
+    });
+    return;
+  }
+
+  // 旧格式: module.exports = async function(req, res, state) {...}
+  if (typeof mod === 'function') {
+    const state = getState();
+    return mod(req, res, state);
+  }
+
+  // 纯对象
+  res.json(Mock.mock(mod));
 }
 
-// 读取端点目录下的 _config.json（供 JS 文件用），不存在返回默认值
+// ---- helpers ----
+
+async function applyThen(filePath, res, delay, error, errorCode, errorMsg, fn) {
+  if (delay > 0) {
+    await new Promise(r => setTimeout(r, delay));
+  }
+  if (error) {
+    return res.status(errorCode || 500).json({
+      code: 'ERROR',
+      message: errorMsg || 'Internal Server Error',
+      _mock: true
+    });
+  }
+  fn();
+}
+
 function getEndpointConfig(filePath) {
+  // JS 新格式不再需要 _config.json，保留兼容
   const dir = path.dirname(filePath);
   const configPath = path.join(dir, '_config.json');
   try {
@@ -37,68 +109,15 @@ function getEndpointConfig(filePath) {
       return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     }
   } catch (e) { /* ignore */ }
-  return { delay: 0, error: false, errorCode: 500, errorMessage: 'Internal Server Error' };
+  return { delay: 0, error: false, errorCode: 500, errorMessage: '' };
 }
 
-// 应用延迟 + 可选的错误注入
-async function applyConfig(res, config, mockCallback) {
-  if (config.delay > 0) {
-    await new Promise(r => setTimeout(r, config.delay));
-  }
-  if (config.error) {
-    return res.status(config.errorCode || 500).json({
-      code: 'ERROR',
-      message: config.errorMessage || 'Internal Server Error',
-      _mock: true
-    });
-  }
-  mockCallback();
-}
-
-// ---- JSON handler ----
-
-function handleJson(filePath, req, res) {
-  const raw = fs.readFileSync(filePath, 'utf-8');
-
-  // JSON 文件内嵌 _mock 字段优先，_config.json 覆盖（如果存在）
-  const metaFromFile = extractMockMeta(raw);
-  const metaFromConfig = getEndpointConfig(filePath);
-  // _config.json 的值覆盖文件内的 _mock（允许 Admin 修改而不改文件内容）
-  const delay = metaFromConfig.delay || (metaFromFile ? metaFromFile.delay : 0);
-  const error = metaFromConfig.error || (metaFromFile ? metaFromFile.error : false);
-  const config = {
-    delay,
-    error,
-    errorCode: metaFromConfig.errorCode || (metaFromFile ? metaFromFile.errorCode : 500),
-    errorMessage: metaFromConfig.errorMessage || (metaFromFile ? metaFromFile.errorMessage : 'Internal Server Error')
-  };
-
-  applyConfig(res, config, () => {
-    const cleanContent = stripMockMeta(raw);
-    const template = JSON.parse(cleanContent);
-    const data = Mock.mock(template);
-    res.json(data);
-  });
-}
-
-// ---- JS handler ----
-
-function handleJs(filePath, req, res, next) {
-  // JS 文件使用 _config.json
-  const config = getEndpointConfig(filePath);
-
-  applyConfig(res, config, () => {
-    delete require.cache[require.resolve(filePath)];
-    const handler = require(filePath);
-
-    if (typeof handler === 'function') {
-      const state = getState();
-      return handler(req, res, state);
-    }
-
-    const data = Mock.mock(handler);
-    res.json(data);
-  });
+function extractMockMeta(content) {
+  try {
+    const obj = JSON.parse(content);
+    if (obj._mock) return obj._mock;
+  } catch (e) { /* ignore */ }
+  return null;
 }
 
 module.exports = { handleJson, handleJs, getEndpointConfig, extractMockMeta };
