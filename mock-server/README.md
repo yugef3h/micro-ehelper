@@ -82,9 +82,12 @@ res.json({ code:"0000", data: { name:"张三", ... } })
 
 ## Mock File Formats
 
-**JSON** — static data with mockjs syntax:
-```json
+**JSON** — static data with mockjs syntax. `_mock` 字段控制延迟和错误：
+
+```jsonc
 {
+  "_mock": { "delay": 300, "error": false },
+  // ↑ 放在第一条，打开文件就能看到。响应中自动剥离，不会返回给前端
   "code": "0000",
   "data": {
     "name": "@cname",
@@ -94,13 +97,28 @@ res.json({ code:"0000", data: { name:"张三", ... } })
 }
 ```
 
-**JS** — dynamic logic with state access:
+**JS** — dynamic logic with state access. 延迟写在 `_config.json`（同目录下）：
+
 ```js
+// dev.js
 const Mock = require('mockjs');
 module.exports = async function(req, res, state) {
-  await new Promise(r => setTimeout(r, 200));
+  // 实际延迟由同目录的 _config.json 控制，Admin UI 可直接编辑
   res.json(Mock.mock({ code: '0000', data: { enabled: state.featureEnabled } }));
 };
+```
+
+```json
+// _config.json（同目录，Admin UI 写入）
+{"delay":300,"error":false,"errorCode":500,"errorMessage":"Internal Server Error"}
+```
+
+### 延迟/错误优先级
+
+```
+_config.json  >  _mock 字段  >  默认(无延迟)
+     ↑              ↑
+  Admin 编辑    文件内可见
 ```
 
 ## Route Matching Priority

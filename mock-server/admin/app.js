@@ -94,6 +94,14 @@ function renderFileTree(nodes, container, depth) {
         header.querySelector('.tree-icon').textContent = hidden ? '▶' : '▼';
       });
 
+      // Badges for delay/error config
+      if (node.config) {
+        const badges = [];
+        if (node.config.delay > 0) badges.push(`<span class="tree-badge delay">${node.config.delay}ms</span>`);
+        if (node.config.error) badges.push('<span class="tree-badge error">ERR</span>');
+        if (badges.length) header.innerHTML += badges.join('');
+      }
+
       wrapper.appendChild(header);
       wrapper.appendChild(childrenDiv);
       container.appendChild(wrapper);
@@ -130,6 +138,7 @@ async function loadFile(node) {
     // Derive preview path from file path
     let apiPath = node.path.replace(/\.(json|js)$/, '').replace(/\/(dev|qa|prod)$/, '');
     document.getElementById('preview-path').value = '/' + apiPath;
+
   } catch (err) {
     alert('加载失败: ' + err.message);
   }

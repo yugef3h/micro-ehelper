@@ -23,10 +23,19 @@ function readDirTree(dirPath, basePath = '') {
 
     if (entry.isDirectory()) {
       const children = readDirTree(fullPath, relPath);
+      // Check for _config.json in this directory
+      const configPath = path.join(fullPath, '_config.json');
+      let dirConfig = null;
+      if (fs.existsSync(configPath)) {
+        try {
+          dirConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        } catch (e) { /* ignore */ }
+      }
       result.push({
         name: entry.name,
         path: relPath,
         type: 'directory',
+        config: dirConfig,
         children: children.length > 0 ? children : undefined,
       });
     } else {
@@ -201,6 +210,54 @@ router.post('/preview', (req, res) => {
     res.json({ code: '0000', data: { status: 'ok', file: result.filePath, response: captured } });
   } catch (err) {
     res.json({ code: '0000', data: { status: 'error', message: err.message } });
+  }
+});
+
+// ---- endpoint config (delay / error simulation) ----
+
+const { getEndpointConfig } = require('./handler');
+
+function getConfigPath(relDir) {
+  return path.join(MOCKS_DIR, relDir, '_config.json');
+}
+
+// GET /endpoint-config?dir=api/user_info
+router.get('/endpoint-config', (req, res) => {
+  try {
+    const configPath = getConfigPath(req.query.dir);
+    if (!configPath.startsWith(MOCKS_DIR)) {
+      return res.status(403).json({ code: 'ERROR', message: 'Path traversal denied' });
+    }
+    let config = { delay: 0, error: false, errorCode: 500, errorMessage: 'Internal Server Error' };
+    if (fs.existsSync(configPath)) {
+      config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    }
+    res.json({ code: '0000', data: config });
+  } catch (err) {
+    res.status(500).json({ code: 'ERROR', message: err.message });
+  }
+});
+
+// POST /endpoint-config { dir: "api/user_info", config: { delay: 300, error: false } }
+router.post('/endpoint-config', (req, res) => {
+  try {
+    const { dir, config } = req.body;
+    if (!dir || !config) {
+      return res.status(400).json({ code: 'ERROR', message: 'dir and config required' });
+    }
+    const configPath = getConfigPath(dir);
+    if (!configPath.startsWith(MOCKS_DIR)) {
+      return res.status(403).json({ code: 'ERROR', message: 'Path traversal denied' });
+    }
+    writeJSON(configPath, {
+      delay: Number(config.delay) || 0,
+      error: Boolean(config.error),
+      errorCode: Number(config.errorCode) || 500,
+      errorMessage: config.errorMessage || 'Internal Server Error'
+    });
+    res.json({ code: '0000', message: 'Saved' });
+  } catch (err) {
+    res.status(500).json({ code: 'ERROR', message: err.message });
   }
 });
 
