@@ -1,0 +1,17 @@
+{
+  "name": "v2mock-demo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve --mode direct --open",
+    "serve:whistle": "vue-cli-service serve --mode whistle --open"
+  },
+  "dependencies": {
+    "axios": "0.24.0",
+    "vue": "2.7.16"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "~4.5.0",
+    "vue-template-compiler": "2.7.16"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "mock": {
+    "port": 8888,
+    "envs": ["dev", "qa", "prod"],
+    "currentEnv": "dev"
+  },
+  "whistle": {
+    "port": 8899,
+    "rules": [
+      { "domain": "api.example.com", "target": "localhost:8888" }
+    ]
+  },
+  "demo": {
+    "port": 8080,
+    "domain": "api.example.com"
+  }
+}

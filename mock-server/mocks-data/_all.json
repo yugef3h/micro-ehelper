@@ -1,8 +1,0 @@
-{
-  "code": "0000",
-  "message": "全局兜底响应",
-  "data": {
-    "message": "This is the global _all.json fallback",
-    "timestamp": "@now"
-  }
-}

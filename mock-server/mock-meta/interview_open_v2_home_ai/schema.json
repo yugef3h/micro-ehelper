@@ -1,0 +1,253 @@
+{
+  "type": "object",
+  "properties": {
+    "result": {
+      "type": "string",
+      "description": ""
+    },
+    "code": {
+      "type": "string",
+      "description": ""
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "showType": {
+          "type": "integer",
+          "description": "展示方式 0-汇总展示 1-按天展示",
+          "default": "InterviewShowTypeEnum.SUMMARY.getShowType()"
+        },
+        "dayTab": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "日期tab"
+        },
+        "dayInterviewList": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "description": "面试日期"
+              },
+              "count": {
+                "type": "integer",
+                "description": "面试人数"
+              },
+              "interviewList": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "interviewDay": {
+                      "type": "string",
+                      "description": ""
+                    },
+                    "interviewDateTime": {
+                      "type": "string",
+                      "description": "面试时间"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "面试人名称"
+                    },
+                    "job": {
+                      "type": "string",
+                      "description": "面试岗位名称"
+                    },
+                    "jobid": {
+                      "type": "integer",
+                      "description": "面试岗位Id"
+                    },
+                    "accountid": {
+                      "type": "integer",
+                      "description": "面试用户Id"
+                    },
+                    "status": {
+                      "type": "number",
+                      "description": "面试状态"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "面试类型"
+                    },
+                    "typeDisplayName": {
+                      "type": "string",
+                      "description": "面试类型展示文案"
+                    },
+                    "typeIcon": {
+                      "type": "string",
+                      "description": "面试类型图标链接"
+                    },
+                    "typePlatformName": {
+                      "type": "string",
+                      "description": "平台名称"
+                    },
+                    "roomUrl": {
+                      "type": "string",
+                      "description": "面试房间URl"
+                    },
+                    "tel": {
+                      "type": "string",
+                      "description": "面试人电话"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "面试ID"
+                    },
+                    "userid": {
+                      "type": "integer",
+                      "description": "面试userId\n简历/投递记录维度"
+                    },
+                    "attachUrl": {
+                      "type": "string",
+                      "description": "头像地址"
+                    },
+                    "minutes": {
+                      "type": "integer",
+                      "description": "面试分钟"
+                    },
+                    "cancel_reason": {
+                      "type": "string",
+                      "description": "20250402 取消原因"
+                    },
+                    "meeting_platform": {
+                      "type": "number",
+                      "description": "meeting_platform 面试平台",
+                      "enum": [
+                        "Byte.valueOf(\"20\")",
+                        "Byte.valueOf(\"21\")",
+                        "Byte.valueOf(\"22\")",
+                        "Byte.valueOf(\"23\")"
+                      ],
+                      "enumDesc": "Byte.valueOf(\"20\") :默认线上面试平台-无忧面试间\nByte.valueOf(\"21\") :腾讯会议\nByte.valueOf(\"22\") :钉钉\nByte.valueOf(\"23\") :飞书",
+                      "mock": {
+                        "mock": "@pick([\"Byte.valueOf(\\\"20\\\")\",\"Byte.valueOf(\\\"21\\\")\",\"Byte.valueOf(\\\"22\\\")\",\"Byte.valueOf(\\\"23\\\")\"])"
+                      }
+                    },
+                    "meeting_link": {
+                      "type": "string",
+                      "description": "会议链接"
+                    },
+                    "meeting_code": {
+                      "type": "string",
+                      "description": "会议号"
+                    },
+                    "meeting_passcode": {
+                      "type": "string",
+                      "description": "会议密码"
+                    },
+                    "formatted_meeting_info": {
+                      "type": "string",
+                      "description": "格式化的会议信息（用于复制）"
+                    },
+                    "aiInterviewQuestionGenerateCode": {
+                      "type": "integer",
+                      "description": "AI面试题生成code（0-无，1-生成中（2小时前），2-生成中（2小时以内），3-已生成）",
+                      "enum": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        "-1"
+                      ],
+                      "enumDesc": "0 :无AI面试题\n1 :生成中（2小时前）\n2 :生成中（2小时以内）\n3 :已生成\n4 :手动生成AI面试题\n-1 :生成失败",
+                      "mock": {
+                        "mock": "@pick([0,1,2,3,4,\"-1\"])"
+                      }
+                    },
+                    "aiInterviewQuestionText": {
+                      "type": "string",
+                      "description": "AI面试题文案"
+                    },
+                    "aiInterviewQuestionHoverText": {
+                      "type": "string",
+                      "description": "HOVER按钮展示文案"
+                    },
+                    "aiInterviewReportGenerateCode": {
+                      "type": "integer",
+                      "description": "AI面试报告生成code（0-无，1-生成中 2-已生成）"
+                    },
+                    "aiInterviewReportText": {
+                      "type": "string",
+                      "description": "AI面试报告文案"
+                    },
+                    "aiInterviewReportTextForApp": {
+                      "type": "string",
+                      "description": "AI面试报告文案(APP)"
+                    },
+                    "aiInterviewReportHoverText": {
+                      "type": "string",
+                      "description": "AI面试报告HOVER展示文案"
+                    },
+                    "aiInterviewReportSummary": {
+                      "type": "string",
+                      "description": "AI面试报告小结"
+                    },
+                    "aiInterviewEnabled": {
+                      "type": "integer",
+                      "description": "是否勾选AI辅助面试：0-否（默认），1-是"
+                    },
+                    "interviewerId": {
+                      "type": "integer",
+                      "description": "面试官ID"
+                    },
+                    "meetingEnd": {
+                      "type": "string",
+                      "description": "展示面试间 1-是，0-否"
+                    },
+                    "aiInterviewProgress": {
+                      "type": "number",
+                      "description": "AI面试进度: 1-待面试 2-面试中 3-已完成 4-已过期 5-已取消"
+                    },
+                    "aiInterviewResult": {
+                      "type": "number",
+                      "description": "AI面试结果: 1-推荐 2-一般 3-不推荐"
+                    },
+                    "aiTimeType": {
+                      "type": "number",
+                      "description": "AI面试时间类型: 1-固定时间 2-自由时间"
+                    },
+                    "aiSettingId": {
+                      "type": "integer",
+                      "description": "AI面试设置表ID"
+                    },
+                    "validityTime": {
+                      "type": "integer",
+                      "description": "有效期（天）"
+                    },
+                    "expectedEndDate": {
+                      "type": "string",
+                      "description": "面试预计截止时间"
+                    },
+                    "createDateTime": {
+                      "type": "string",
+                      "description": "面试发起时间（数据生成时间）"
+                    },
+                    "createDay": {
+                      "type": "string",
+                      "description": "发起日期（用于AI面试按create_date分组）"
+                    }
+                  }
+                },
+                "description": "详细面试列表"
+              }
+            }
+          },
+          "description": "面试列表"
+        }
+      },
+      "description": ""
+    },
+    "msg": {
+      "type": "string",
+      "description": ""
+    }
+  },
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": ""
+}
