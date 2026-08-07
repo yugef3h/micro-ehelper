@@ -91,27 +91,29 @@ check_whistle() {
     pass "HTTPS 证书 OK"
   fi
 
-  # 同步规则
+  # 同步规则（多条规则合并进 v2mock 一个规则集，whistle 同时只激活一个规则集）
   echo "--- Whistle 规则同步 ---"
-  local rule_count=$(node -e "console.log(require('$CONFIG').whistle.rules.length)")
-  for i in $(seq 0 $((rule_count - 1))); do
-    local domain=$(node -e "console.log(require('$CONFIG').whistle.rules[$i].domain)")
-    local target=$(node -e "console.log(require('$CONFIG').whistle.rules[$i].target)")
-    local rule_value="$domain $target"
+  local rule_value=$(node -e "
+    const rules = require('$CONFIG').whistle.rules;
+    console.log(rules.map(r => r.domain + ' ' + r.target).join('\n'));
+  ")
 
-    # 检查是否已有同名规则
-    local existing=$(curl -s "http://127.0.0.1:$WHISTLE_PORT/cgi-bin/rules/list" | \
-      node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));const r=d.list.find(r=>r.name==='v2mock');console.log(r?r.data:'')")
+  # 检查是否已有同名规则
+  local existing=$(curl -s "http://127.0.0.1:$WHISTLE_PORT/cgi-bin/rules/list" | \
+    node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));const r=d.list.find(r=>r.name==='v2mock');console.log(r?r.data:'')")
 
-    if [ "$existing" = "$rule_value" ]; then
-      pass "规则已匹配: $domain → $target"
-    else
-      warn "更新规则: $domain → $target"
-      curl -s -X POST "http://127.0.0.1:$WHISTLE_PORT/cgi-bin/rules/add" \
-        -d "name=v2mock&value=$rule_value&selected=true" > /dev/null
-      pass "规则已同步: $domain → $target"
-    fi
-  done
+  if [ "$existing" = "$rule_value" ]; then
+    pass "规则已匹配:"
+    echo "$rule_value" | sed 's/^/    /'
+  else
+    warn "更新规则:"
+    echo "$rule_value" | sed 's/^/    /'
+    curl -s -X POST "http://127.0.0.1:$WHISTLE_PORT/cgi-bin/rules/add" \
+      --data-urlencode "name=v2mock" \
+      --data-urlencode "value=$rule_value" \
+      --data-urlencode "selected=true" > /dev/null
+    pass "规则已同步"
+  fi
 }
 
 # ============================================================

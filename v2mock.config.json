@@ -7,7 +7,8 @@
   "whistle": {
     "port": 8899,
     "rules": [
-      { "domain": "api.example.com", "target": "localhost:8888" }
+      { "domain": "api.example.com", "target": "https://jsonplaceholder.typicode.com" },
+      { "domain": "demo.example.com", "target": "localhost:8080" }
     ]
   },
   "demo": {
